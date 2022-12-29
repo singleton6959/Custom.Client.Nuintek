@@ -14,6 +14,7 @@ using System.Security.Policy;
 using Adaptive.Membership;
 using System.IO.Ports;
 using Adaptive.Service;
+using Adaptive;
 
 namespace Custom.Client.Nuintek.Fmea
 {
@@ -170,6 +171,8 @@ namespace Custom.Client.Nuintek.Fmea
         {
             try
             {
+                string objectType = URID.GetObjectType(entityId);
+
                 NuintekUtils nu = new NuintekUtils();
                 DataTable structureDt = nu.GetTopDownStructure(entityId);
                 string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -200,12 +203,15 @@ namespace Custom.Client.Nuintek.Fmea
                     P_ClassCodeCode = topDt.Rows[0]["ClassCodeCode"].ToString();
                     P_ClassCode = topDt.Rows[0]["P$ClassCode"].ToString();
                     P_Spec = topDt.Rows[0]["P$Spec"].ToString();
-                    // insert top part
-                    sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec);
 
-                    Services.ApplicationServices.DataSvc.ExecuteNonQuery(sql);
+                    if (objectType == "ASSY")
+                    {
+                        // insert top part
+                        sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec);
 
-                    nu.UpdateSendFMEAStatus("S", entityId);
+                        Services.ApplicationServices.DataSvc.ExecuteNonQuery(sql);
+                        nu.UpdateSendFMEAStatus("S", entityId);
+                    }
                 }
                 Dictionary<string, string> dicParentIdSendStatus = new Dictionary<string, string>();
                 dicParentIdSendStatus.Add(entityId, sendFMEAStatus);
@@ -213,6 +219,7 @@ namespace Custom.Client.Nuintek.Fmea
                 {
                     sendFMEAStatus = structureDt.Rows[i]["P$SendFMEAStatus"].ToString();
                     string child_id = structureDt.Rows[i]["child_id"].ToString();
+                    objectType = URID.GetObjectType(child_id);
                     if (!dicParentIdSendStatus.ContainsKey(child_id)) 
                         dicParentIdSendStatus.Add(child_id, sendFMEAStatus);
                     parent_id = structureDt.Rows[i]["parent_id"].ToString();
@@ -242,12 +249,13 @@ namespace Custom.Client.Nuintek.Fmea
                         }
                         parent_number = dicParentNum[parent_id];
 
-                        if (sendFMEAStatus != "S")
+                        if (sendFMEAStatus != "S" && objectType == "ASSY")
                         {
                             // insert part
                             IF_IUD = GetIUD(sendFMEAStatus);
                             sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec);
                             Services.ApplicationServices.DataSvc.ExecuteScalar(sql);
+                            nu.UpdateSendFMEAStatus("S", child_id);
                         }
 
                         string sequence = structureDt.Rows[i]["sequence"].ToString();
@@ -257,8 +265,6 @@ namespace Custom.Client.Nuintek.Fmea
                         sql = String.Format("INSERT INTO IF008_BOM (IF_DATE, IF_FLAG, IF_IUD, PNumber, CNumber, sequence, quantity) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}')", date, IF_IUD, parent_number, P_Number, sequence, quantity);
                         Services.ApplicationServices.DataSvc.ExecuteScalar(sql);
 
-
-                        nu.UpdateSendFMEAStatus("S", child_id);
                     }
                 }
             }
