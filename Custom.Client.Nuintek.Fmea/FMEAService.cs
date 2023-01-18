@@ -193,6 +193,8 @@ namespace Custom.Client.Nuintek.Fmea
                 string P_ClassCode = string.Empty;
                 string P_Spec = string.Empty;
                 string IF_IUD = string.Empty;
+                string Category = string.Empty;
+
                 if (sendFMEAStatus != "S")
                 {
                     IF_IUD = GetIUD(sendFMEAStatus);
@@ -204,19 +206,18 @@ namespace Custom.Client.Nuintek.Fmea
                     P_ClassCode = topDt.Rows[0]["P$ClassCode"].ToString();
                     P_Spec = topDt.Rows[0]["P$Spec"].ToString();
 
-                    if (objectType == "ASSY")
-                    {
-                        // insert top part
-                        sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec);
+                    if (objectType == "ASSY") Category = "A";
+                    // insert top part
+                    sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec, Category) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}', '{9}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec, Category);
 
-                        Services.ApplicationServices.DataSvc.ExecuteNonQuery(sql);
-                        nu.UpdateSendFMEAStatus("S", entityId);
-                    }
+                    Services.ApplicationServices.DataSvc.ExecuteNonQuery(sql);
+                    nu.UpdateSendFMEAStatus("S", entityId);
                 }
                 Dictionary<string, string> dicParentIdSendStatus = new Dictionary<string, string>();
                 dicParentIdSendStatus.Add(entityId, sendFMEAStatus);
                 for (int i = 0; i < structureDt.Rows.Count; i++)
                 {
+                    Category = string.Empty;
                     sendFMEAStatus = structureDt.Rows[i]["P$SendFMEAStatus"].ToString();
                     string child_id = structureDt.Rows[i]["child_id"].ToString();
                     objectType = URID.GetObjectType(child_id);
@@ -249,11 +250,12 @@ namespace Custom.Client.Nuintek.Fmea
                         }
                         parent_number = dicParentNum[parent_id];
 
-                        if (sendFMEAStatus != "S" && objectType == "ASSY")
+                        if (sendFMEAStatus != "S")
                         {
+                            if (objectType == "ASSY") Category = "A";
                             // insert part
                             IF_IUD = GetIUD(sendFMEAStatus);
-                            sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec);
+                            sql = string.Format("INSERT INTO IF002_PART (IF_DATE, IF_FLAG, IF_IUD, Number, Name, ModelCode, Model, ClassCodeCode, ClassCode, Spec, Category) VALUES ('{0}', 'N', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}', '{8}', '{9}')", date, IF_IUD, P_Number, P_Name, P_ModelCode, P_Model, P_ClassCodeCode, P_ClassCode, P_Spec, Category);
                             Services.ApplicationServices.DataSvc.ExecuteScalar(sql);
                             nu.UpdateSendFMEAStatus("S", child_id);
                         }
